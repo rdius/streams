@@ -8,6 +8,8 @@ import streamlit as st
 import utils
 from concurrent.futures import ThreadPoolExecutor
 import tracemalloc
+import logging
+
 
 tracemalloc.start()
 RESIZE_DIMENSIONS = (640, 480)
@@ -18,6 +20,9 @@ MAX_QUEUE_SIZE = 10  # Set the maximum size of the queue
 # skip frames based on MSE
 # Include concurrent.futures import ThreadPoolExecutor  to paralelize frames process
 #
+
+# Configure logging
+logging.basicConfig(filename='app.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 def run_tracker_in_thread_nowritting(filename, model, output_queue, video_output_path, camera_label):
     video = cv2.VideoCapture(filename)
@@ -215,6 +220,7 @@ def run_tracker_in_thread_parallelized(filename, model, output_queue, video_outp
 
     video.release()
     executor.shutdown()
+
 
 def main():
     st.title("ThuliumX - TrackerV0")
