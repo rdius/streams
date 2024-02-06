@@ -2,3 +2,4 @@ numpy
 opencv_python
 streamlit
 ultralytics
+opencv-python-headless
