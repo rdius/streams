@@ -2,4 +2,4 @@ numpy
 streamlit
 ultralytics
 opencv-python-headless==4.9.0.80
---no-cache-dir lap
+git+https://github.com/gatagat/lap@new-packaging
