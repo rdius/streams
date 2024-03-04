@@ -8,8 +8,8 @@ import streamlit as st
 import utils
 from concurrent.futures import ThreadPoolExecutor
 import tracemalloc
-import logging
-
+import logging, sys, io
+import contextlib
 
 tracemalloc.start()
 RESIZE_DIMENSIONS = (640, 480)
@@ -20,9 +20,6 @@ MAX_QUEUE_SIZE = 10  # Set the maximum size of the queue
 # skip frames based on MSE
 # Include concurrent.futures import ThreadPoolExecutor  to paralelize frames process
 #
-
-# Configure logging
-logging.basicConfig(filename='app.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 def run_tracker_in_thread_nowritting(filename, model, output_queue, video_output_path, camera_label):
     video = cv2.VideoCapture(filename)
@@ -81,8 +78,19 @@ def mse(imageA, imageB):
 
 def process_frame(frame, model):
     # Frame processing logic
-    detections = model.track(frame, persist=True)
-    res_plotted = detections[0].plot()
+    log_buffer = io.StringIO()
+    # Redirecting stdout to log_buffer
+    with contextlib.redirect_stdout(log_buffer):
+        detections = model.track(frame, persist=True)
+        res_plotted = detections[0].plot()
+
+    # Capture any printed output
+    #log_output = log_buffer.getvalue()
+
+    # Write the captured output to a log file
+    with open('log_file_data.txt', 'a') as log_file:
+        log_file.write(log_buffer.getvalue())
+
     return res_plotted
 
 
@@ -182,8 +190,9 @@ def run_tracker_in_thread_parallelized(filename, model, output_queue, video_outp
         prev_frame_processed = cv2.resize(prev_frame_processed, (reduced_width, reduced_height))
 
     local_queue = Queue(maxsize=max_queue_size)
-
+    log_buffer = io.StringIO()
     while True:
+
         print(f"\n*From {camera_label}*")
         ret, frame = video.read()
 
@@ -223,6 +232,7 @@ def run_tracker_in_thread_parallelized(filename, model, output_queue, video_outp
 
 
 def main():
+
     st.title("ThuliumX - TrackerV0")
     # Streamlit sidebar for parameter adjustments
     st.sidebar.title("Adjust Parameters")
@@ -258,10 +268,11 @@ def main():
         queue2 = Queue()
 
         # Start threads for video processing
-        #thread1 = threading.Thread(target=run_tracker_in_thread_parallelized, args=(rtsp_url1, model1, queue1, "output1.mp4", "Camera 2"), daemon=True)
         thread1 = threading.Thread(target=run_tracker_in_thread_parallelized, args=(rtsp_url1, model1, queue1, "output1.mp4", "Camera 2", reduced_width, reduced_height, skip_rate, mse_threshold, max_queue_size), daemon=True)
-        #thread2 = threading.Thread(target=run_tracker_in_thread_parallelized, args=(rtsp_url2, model2, queue2, "output2.mp4", "Camera 1"), daemon=True)
         thread2 = threading.Thread(target=run_tracker_in_thread_parallelized, args=(rtsp_url2, model2, queue2, "output1.mp4", "Camera 1", reduced_width, reduced_height, skip_rate, mse_threshold, max_queue_size), daemon=True)
+        #thread1 = threading.Thread(target=run_tracker_in_thread_nowritting, args=(rtsp_url1, model1, queue1, "output1.mp4", "Camera 2")) #, reduced_width, reduced_height, skip_rate, mse_threshold, max_queue_size), daemon=True)
+        #thread2 = threading.Thread(target=run_tracker_in_thread_nowritting, args=(rtsp_url2, model2, queue2, "output1.mp4", "Camera 1")) #, reduced_width, reduced_height, skip_rate, mse_threshold, max_queue_size), daemon=True)
+
         thread1.start()
         thread2.start()
 
@@ -293,6 +304,7 @@ def main():
         # Clean up
         thread1.join()
         thread2.join()
+
 
 if __name__ == "__main__":
     main()
