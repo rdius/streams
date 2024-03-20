@@ -1,0 +1,5 @@
+numpy
+streamlit
+ultralytics
+opencv-python-headless==4.9.0.80
+git+https://github.com/gatagat/lap@new-packaging
